@@ -76,6 +76,14 @@ def load_config(path: str) -> list:
     return claims
 
 
+def _pick(m) -> str:
+    """The claimed value: the first group that took part in the match (so `a(\\d+)|b(\\d+)` works), else the whole match."""
+    for g in m.groups():
+        if g is not None:
+            return g
+    return m.group(0)
+
+
 def _read(root: str, rel: str) -> str:
     with open(os.path.join(root, rel), encoding="utf-8", errors="replace") as fh:
         return fh.read()
@@ -91,7 +99,7 @@ def _actual(claim: dict, root: str, claimed: str):
         m = re.search(ex["regex"], text, re.M)
         if not m:
             raise RuntimeError(f"no match for {ex['regex']!r} in {ex['file']}")
-        return (m.group(1) if m.groups() else m.group(0)), f"{ex['file']}"
+        return _pick(m), f"{ex['file']}"
     if "command" in ex:
         p = subprocess.run(ex["command"], shell=True, cwd=root, capture_output=True, text=True, timeout=int(ex.get("timeout", 600)))
         if p.returncode != 0:
@@ -133,7 +141,7 @@ def check(root: str, claims: list) -> Report:
             continue
         cache = {}
         for m in matches:
-            claimed = (m.group(1) if m.groups() else m.group(0)).strip()
+            claimed = _pick(m).strip()
             line = text.count("\n", 0, m.start()) + 1
             key = claimed if "git_tag" in c["expect"] else ""
             if key not in cache:
