@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "claims-check"
+version = "0.1.0"
+description = "Fail CI when the numbers and versions written in your README (test counts, case counts, version pins, release tags) no longer match the repository. Zero dependencies, GitHub Action."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Muhammad Arslan", email = "cosmichackerx@users.noreply.github.com" }]
+keywords = ["readme", "documentation", "docs-as-code", "ci", "github-actions", "lint", "linter", "drift", "badges", "version-pin", "test-count"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Environment :: Console",
+  "Topic :: Software Development :: Quality Assurance",
+  "Topic :: Software Development :: Documentation",
+]
+
+[project.urls]
+Homepage = "https://github.com/cosmichackerx/claims-check"
+Issues = "https://github.com/cosmichackerx/claims-check/issues"
+
+[project.scripts]
+claims-check = "claims_check.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  action-metadata:
+    name: action.yml metadata (Marketplace limits)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: name, description (max 125 characters) and branding are present and valid
+        run: |
+          python3 - <<'PY'
+          import re
+          t = open("action.yml", encoding="utf-8").read()
+          name = re.search(r"^name:\s*(.+)$", t, re.M).group(1).strip().strip('"')
+          desc = re.search(r"^description:\s*(.+)$", t, re.M).group(1).strip().strip('"')
+          icon = re.search(r"^  icon:\s*(\S+)", t, re.M)
+          color = re.search(r"^  color:\s*(\S+)", t, re.M)
+          assert name, "name missing"
+          assert 0 < len(desc) <= 125, f"description is {len(desc)} characters; the Marketplace allows at most 125"
+          assert icon and color, "branding icon and color are required"
+          assert color.group(1) in {"white", "black", "yellow", "blue", "green", "orange", "red", "purple", "gray-dark"}, color.group(1)
+          print(f"ok: {name!r}, description {len(desc)} characters, icon {icon.group(1)}, color {color.group(1)}")
+          PY
+
+  test:
+    name: test (${{ matrix.os }}, python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.9", "3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install --upgrade pip pytest
+      - run: python -m pip install .
+      - run: python -m pytest -q
+      - name: Installed CLI runs
+        run: |
+          claims-check --version
+
+  action:
+    name: action (this checkout, on this repository's own claims)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - run: python -m pip install pytest
+      - name: The claims of this README hold
+        uses: ./
+      - name: A stale claim fails the step
+        id: stale
+        continue-on-error: true
+        uses: ./
+        with:
+          config: tests/fixtures/stale.json
+      - name: It really failed
+        run: test "${{ steps.stale.outcome }}" = "failure"
+
+  package:
+    name: build wheel and sdist, install the wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - run: python -m pip install build
+      - run: python -m build
+      - run: |
+          python -m venv /tmp/v
+          /tmp/v/bin/pip install dist/*.whl
+          /tmp/v/bin/claims-check --version
+
+  dependabot-gaps:
+    name: dependabot-gaps (released action, consumer test)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: cosmichackerx/dependabot-gaps@v0.2.1
+        with:
+          fail-on: warning
+          pr-mode: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
+
+  node24-ready:
+    name: node24-ready (this repository's workflows)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: cosmichackerx/node24-ready@v0.7.0
+        with:
+          path: .github action.yml
+          fail-on: error
+
