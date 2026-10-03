@@ -122,3 +122,22 @@ jobs:
           path: .github action.yml
           fail-on: error
 
+  reusable-release-gate:
+    name: reusable release gate (this checkout)
+    permissions:
+      contents: read
+    uses: ./.github/workflows/reusable-release-gate.yml
+    with:
+      tag: v0.3.0
+      python-version: "3.13"
+      setup: python -m pip install pytest
+      claims-check-ref: ${{ github.sha }}
+
+  reusable-latest-tag:
+    name: reusable latest-tag check (this checkout, machinery only)
+    permissions:
+      contents: read
+    uses: ./.github/workflows/reusable-latest-tag.yml
+    with:
+      config: .claims.json
+      claims-check-ref: ${{ github.sha }}

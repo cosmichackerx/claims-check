@@ -73,12 +73,51 @@ Exit code 0: every claim holds. 1: a claim failed. 2: usage or config error. For
 ```yaml
 - uses: actions/checkout@v7
 - run: pip install -e . pytest      # whatever your commands need
-- uses: cosmichackerx/claims-check@v0.2.0
+- uses: cosmichackerx/claims-check@v0.3.0
   with:
     config: .claims.json
 ```
 
 Inputs: `config`, `root`, `summary`. The action runs the checker from its own checkout with the runner's Python and installs nothing.
+
+## Reusable workflows (release gate and weekly pin check)
+
+Instead of copying a pre-release gate into every repository, call the two reusable workflows of this repository. Add `.claims-release.json` (pins and version against the tag, `expect.env`) and `.claims-latest.json` (`expect.latest_tag`) as described above, then:
+
+```yaml
+# .github/workflows/release-gate.yml
+name: Release gate
+on:
+  workflow_dispatch:
+    inputs:
+      tag: {description: "Tag you are about to create, for example v1.2.3", required: true}
+  push:
+    tags: ["v*"]
+permissions:
+  contents: read
+jobs:
+  gate:
+    uses: cosmichackerx/claims-check/.github/workflows/reusable-release-gate.yml@v0.3.0
+    with:
+      tag: ${{ inputs.tag || github.ref_name }}
+      python-version: "3.13"            # optional: Python / Node for the commands in .claims.json
+      setup: python -m pip install pytest .   # optional: any setup command
+```
+
+```yaml
+# .github/workflows/claims-latest.yml
+name: README pins vs newest tag
+on:
+  schedule: [{cron: "17 5 * * 1"}]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pins:
+    uses: cosmichackerx/claims-check/.github/workflows/reusable-latest-tag.yml@v0.3.0
+```
+
+Inputs of the gate: `tag` (required), `python-version`, `node-version`, `setup`, `config` (default `.claims.json`), `release-config` (default `.claims-release.json`), `claims-check-ref` (the ref of this repository whose action runs the checks, default the release the workflow file belongs to). The workflows check out your repository and a second copy of this one into `.claims-check/`, so no action reference has to be edited per repository. Pin the workflow by tag (`@v0.3.0`) or by commit SHA. A caller needs only `contents: read`.
 
 ## Limitations (read these)
 
