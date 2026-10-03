@@ -1,0 +1,1 @@
+{"claims": [{"id": "deliberately stale", "file": "README.md", "regex": "claims-check@v([0-9.]+)", "expect": {"value": "9.9.9"}}]}

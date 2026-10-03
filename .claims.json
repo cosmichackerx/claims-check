@@ -1,0 +1,24 @@
+{
+  "claims": [
+    {
+      "id": "unit tests",
+      "file": "README.md",
+      "regex": "(\\d+)\\+ unit tests",
+      "match": "at-least",
+      "max_gap": 15,
+      "expect": {
+        "command": "python -m pytest --collect-only -q",
+        "regex": "^(\\d+) tests? collected"
+      }
+    },
+    {
+      "id": "version pin in the README",
+      "file": "README.md",
+      "regex": "claims-check@v([0-9.]+)",
+      "expect": {
+        "file": "pyproject.toml",
+        "regex": "^version = \"([0-9.]+)\""
+      }
+    }
+  ]
+}
