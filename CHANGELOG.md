@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0 - 2026-10-03
+
+* **Added** `expect.latest_tag`: the real value is the highest `v1.2.3`-style tag of a repository (numeric order). For a weekly job that checks the README pins against the newest release.
+* **Added** `expect.env`: the real value is an environment variable, optionally cut with a regex. For a pre-release gate that makes the README pins and the package version equal the tag being released (`GITHUB_REF_NAME`).
+
 ## 0.1.1 - 2026-10-03
 
 * **Fixed** a regex with alternation (`a@v(\d+)|rev: v(\d+)`) crashed with a traceback because group 1 did not take part in the match; the first group that did is now used. Found by the first roll-out to other repositories.

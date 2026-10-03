@@ -127,3 +127,42 @@ def test_alternation_regex_uses_the_group_that_matched(tmp_path):
     write(tmp_path, "uses: x@v3\nrev: v3\n", [claim(regex=r"x@v(\d+)|rev: v(\d+)", expect={"value": 3})])
     rep = check(str(tmp_path), load_config(str(tmp_path / ".claims.json")))
     assert [r.ok for r in rep.results] == [True, True]
+
+
+def test_env_source(tmp_path, monkeypatch):
+    c = {"id": "tag", "file": "README.md", "regex": r"tool@v([\d.]+)", "expect": {"env": "REL_TAG", "regex": r"^v([\d.]+)$"}}
+    monkeypatch.setenv("REL_TAG", "v1.2.0")
+    assert run(tmp_path, "tool@v1.2.0", [c]).failed == []
+    r = run(tmp_path, "tool@v1.1.0", [c])
+    assert r.failed and "environment variable REL_TAG" in r.failed[0].message
+    monkeypatch.setenv("REL_TAG", "main")
+    r = run(tmp_path, "tool@v1.2.0", [c])
+    assert r.failed and "does not match" in r.failed[0].message
+    monkeypatch.delenv("REL_TAG")
+    r = run(tmp_path, "tool@v1.2.0", [c])
+    assert r.failed and "is not set" in r.failed[0].message
+
+
+def test_latest_tag_source_uses_numeric_order(tmp_path):
+    origin = tmp_path / "origin"
+    origin.mkdir()
+    cmds = [["init", "-q", "-b", "main"], ["-c", "user.name=t", "-c", "user.email=t@e.invalid", "commit", "-q", "--allow-empty", "-m", "x"]]
+    cmds += [["tag", t] for t in ("v0.9.0", "v0.10.0", "v0.2.1", "nightly", "v1.0.0-rc1")]
+    for args in cmds:
+        subprocess.run(["git", *args], cwd=origin, check=True, capture_output=True)
+    work = tmp_path / "w"
+    work.mkdir()
+    c = {"id": "latest", "file": "README.md", "regex": r"tool@v([\d.]+)", "expect": {"latest_tag": str(origin)}}
+    assert run(work, "tool@v0.10.0", [c]).failed == []
+    r = run(work, "tool@v0.9.0", [c])
+    assert r.failed and "latest tag v0.10.0" in r.failed[0].message
+
+
+def test_latest_tag_without_tags_fails(tmp_path):
+    origin = tmp_path / "origin"
+    origin.mkdir()
+    for args in (["init", "-q", "-b", "main"], ["-c", "user.name=t", "-c", "user.email=t@e.invalid", "commit", "-q", "--allow-empty", "-m", "x"]):
+        subprocess.run(["git", *args], cwd=origin, check=True, capture_output=True)
+    c = {"id": "latest", "file": "README.md", "regex": r"tool@v([\d.]+)", "expect": {"latest_tag": str(origin)}}
+    r = run(tmp_path, "tool@v1.0.0", [c])
+    assert r.failed and "no tag like" in r.failed[0].message

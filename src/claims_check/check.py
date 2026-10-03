@@ -60,9 +60,9 @@ def load_config(path: str) -> list:
         if c["id"] in seen:
             raise ConfigError(f"{path}: duplicate claim id '{c['id']}'")
         seen.add(c["id"])
-        kinds = [k for k in ("command", "file", "value", "git_tag") if k in c["expect"]]
+        kinds = [k for k in ("command", "file", "value", "git_tag", "env", "latest_tag") if k in c["expect"]]
         if len(kinds) != 1:
-            raise ConfigError(f"{path}: claim '{c['id']}': 'expect' needs exactly one of command, file (+regex), value, git_tag")
+            raise ConfigError(f"{path}: claim '{c['id']}': 'expect' needs exactly one of command, file (+regex), value, git_tag, env, latest_tag")
         if kinds[0] == "file" and "regex" not in c["expect"]:
             raise ConfigError(f"{path}: claim '{c['id']}': expect.file needs expect.regex")
         try:
@@ -116,6 +116,32 @@ def _actual(claim: dict, root: str, claimed: str):
         else:
             out = out.splitlines()[-1].strip()
         return out, f"`{ex['command']}`"
+    if "env" in ex:
+        raw = os.environ.get(ex["env"])
+        if raw is None:
+            raise RuntimeError(f"environment variable {ex['env']} is not set")
+        if "regex" in ex:
+            m = re.search(ex["regex"], raw)
+            if not m:
+                raise RuntimeError(f"{ex['env']}={raw!r} does not match {ex['regex']!r}")
+            raw = _pick(m)
+        return raw, f"environment variable {ex['env']}"
+    if "latest_tag" in ex:
+        prefix = ex.get("prefix", "v")
+        p = subprocess.run(["git", "ls-remote", "--tags", "--refs", ex["latest_tag"]], capture_output=True, text=True, timeout=60)
+        if p.returncode != 0:
+            raise RuntimeError(f"git ls-remote failed for {ex['latest_tag']}: {p.stderr.strip()[-200:]}")
+        best = None
+        for line in p.stdout.splitlines():
+            name = line.split("refs/tags/", 1)[-1]
+            m = re.fullmatch(re.escape(prefix) + r"(\d+(?:\.\d+)*)", name)
+            if m:
+                key = tuple(int(x) for x in m.group(1).split("."))
+                if best is None or key > best[0]:
+                    best = (key, m.group(1))
+        if best is None:
+            raise RuntimeError(f"no tag like {prefix}1.2.3 in {ex['latest_tag']}")
+        return best[1], f"latest tag {prefix}{best[1]} in {ex['latest_tag']}"
     # git_tag: the claimed value is a version; the tag v<claimed> must exist in the repository at that URL
     tag = ex.get("prefix", "v") + claimed
     p = subprocess.run(["git", "ls-remote", "--tags", ex["git_tag"], f"refs/tags/{tag}"], capture_output=True, text=True, timeout=60)
