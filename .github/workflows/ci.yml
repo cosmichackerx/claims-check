@@ -139,5 +139,5 @@ jobs:
       contents: read
     uses: ./.github/workflows/reusable-latest-tag.yml
     with:
-      config: .claims.json
+      config: .claims-smoke.json
       claims-check-ref: ${{ github.sha }}
