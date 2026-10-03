@@ -71,7 +71,7 @@ Exit code 0: every claim holds. 1: a claim failed. 2: usage or config error. For
 ```yaml
 - uses: actions/checkout@v7
 - run: pip install -e . pytest      # whatever your commands need
-- uses: cosmichackerx/claims-check@v0.1.0
+- uses: cosmichackerx/claims-check@v0.1.1
   with:
     config: .claims.json
 ```

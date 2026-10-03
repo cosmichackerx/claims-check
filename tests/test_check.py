@@ -120,3 +120,10 @@ def test_cli_exit_codes_and_formats(tmp_path, capsys):
     (tmp_path / "README.md").write_text("12 tests")
     assert main(["--root", str(tmp_path), "--config", str(cfg)]) == 0
     assert main(["--root", str(tmp_path), "--config", str(tmp_path / "missing.json")]) == 2
+
+
+def test_alternation_regex_uses_the_group_that_matched(tmp_path):
+    # found by the first roll-out: `a@v(\d+)|rev: v(\d+)` made group(1) None and crashed
+    write(tmp_path, "uses: x@v3\nrev: v3\n", [claim(regex=r"x@v(\d+)|rev: v(\d+)", expect={"value": 3})])
+    rep = check(str(tmp_path), load_config(str(tmp_path / ".claims.json")))
+    assert [r.ok for r in rep.results] == [True, True]
