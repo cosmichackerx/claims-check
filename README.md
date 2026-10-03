@@ -63,6 +63,8 @@ Exit code 0: every claim holds. 1: a claim failed. 2: usage or config error. For
   * `file` + `regex`: group 1 of the first match in another file (for example the version in `pyproject.toml` or `package.json`).
   * `value`: a literal.
   * `git_tag`: a repository URL (or path); the claimed value `1.2.0` must exist there as the tag `v1.2.0` (`prefix` changes the `v`). Uses `git ls-remote`.
+  * `latest_tag`: a repository URL (or path); the real value is the **highest** `v1.2.3`-style tag there (numeric order, `prefix` changes the `v`). Use it for a weekly "the README pins the newest release" job.
+  * `env`: the value of an environment variable, optionally cut with `regex` (group 1). Use it for a **pre-release gate**: `{"env": "GITHUB_REF_NAME", "regex": "^v([0-9.]+)$"}` makes the README pin and the package version equal the tag being released.
 * `match`: `exact` (default), `at-least` (claimed <= real, for "100+"), `at-most`. `max_gap` makes `at-least` fail when the claim is too far below the real value (a stale "100+" when there are 400).
 * `optional: true`: no match in the file is not an error. `ignore_case`.
 
@@ -71,7 +73,7 @@ Exit code 0: every claim holds. 1: a claim failed. 2: usage or config error. For
 ```yaml
 - uses: actions/checkout@v7
 - run: pip install -e . pytest      # whatever your commands need
-- uses: cosmichackerx/claims-check@v0.1.1
+- uses: cosmichackerx/claims-check@v0.2.0
   with:
     config: .claims.json
 ```
