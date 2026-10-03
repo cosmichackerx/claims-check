@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0 - 2026-10-03
+
+* **Added** two reusable workflows, `reusable-release-gate.yml` and `reusable-latest-tag.yml`, so a repository calls them with a few lines instead of copying the gate (inputs: `tag`, `python-version`, `node-version`, `setup`, `config`, `release-config`, `claims-check-ref`). This repository's CI runs both against the checkout under test, and `.claims.json` checks that the workflows and the CI test pin the current version.
+* README: "11 repositories" (was 10).
+
 ## 0.2.0 - 2026-10-03
 
 * **Added** `expect.latest_tag`: the real value is the highest `v1.2.3`-style tag of a repository (numeric order). For a weekly job that checks the README pins against the newest release.

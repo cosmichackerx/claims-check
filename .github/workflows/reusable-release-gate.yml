@@ -1,0 +1,84 @@
+# Reusable pre-release gate: README numbers and pins hold, and the README pins and the package version equal the tag being released.
+# Call it from a thin workflow in your repository (see the README, "Reusable workflows"). Needs `.claims.json` and `.claims-release.json` there.
+name: Reusable release gate
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "The tag being released, for example v1.2.3"
+        required: true
+        type: string
+      python-version:
+        description: "Python for the commands in your claims; empty = do not set up Python"
+        required: false
+        type: string
+        default: ""
+      node-version:
+        description: "Node for the commands in your claims; empty = do not set up Node"
+        required: false
+        type: string
+        default: ""
+      setup:
+        description: "Shell command run before the checks, for example `python -m pip install pytest .` or `npm ci && npm run build`"
+        required: false
+        type: string
+        default: ""
+      config:
+        description: "Claims file for the README numbers"
+        required: false
+        type: string
+        default: ".claims.json"
+      release-config:
+        description: "Claims file for the pins and version against the tag"
+        required: false
+        type: string
+        default: ".claims-release.json"
+      claims-check-ref:
+        description: "Ref of cosmichackerx/claims-check whose action runs the checks"
+        required: false
+        type: string
+        default: "v0.3.0"
+
+permissions:
+  contents: read
+
+jobs:
+  claims:
+    name: claims-check against the tag
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+      SETUP: ${{ inputs.setup }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: cosmichackerx/claims-check
+          ref: ${{ inputs.claims-check-ref }}
+          path: .claims-check
+          persist-credentials: false
+      - if: ${{ inputs.python-version != '' }}
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ inputs.python-version }}
+      - if: ${{ inputs.node-version != '' }}
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ inputs.node-version }}
+      - name: Setup
+        if: ${{ inputs.setup != '' }}
+        run: bash -e -c "$SETUP"
+      - name: Tag looks like a version
+        run: |
+          case "$RELEASE_TAG" in v[0-9]*) ;; *) echo "tag=$RELEASE_TAG is not a version tag (use v1.2.3)"; exit 1;; esac
+      - name: README numbers and pins hold
+        uses: ./.claims-check
+        with:
+          config: ${{ inputs.config }}
+      - name: README pins and package version equal the tag being released
+        uses: ./.claims-check
+        with:
+          config: ${{ inputs.release-config }}

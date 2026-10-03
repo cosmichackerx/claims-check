@@ -1,0 +1,38 @@
+# Reusable weekly check: the README must pin the newest release of this repository.
+# Call it from a thin scheduled workflow (see the README, "Reusable workflows"). Needs `.claims-latest.json` in your repository.
+name: Reusable latest-tag check
+
+on:
+  workflow_call:
+    inputs:
+      config:
+        description: "Claims file with an expect.latest_tag claim"
+        required: false
+        type: string
+        default: ".claims-latest.json"
+      claims-check-ref:
+        description: "Ref of cosmichackerx/claims-check whose action runs the checks"
+        required: false
+        type: string
+        default: "v0.3.0"
+
+permissions:
+  contents: read
+
+jobs:
+  pins:
+    name: README pins equal the newest tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: cosmichackerx/claims-check
+          ref: ${{ inputs.claims-check-ref }}
+          path: .claims-check
+          persist-credentials: false
+      - uses: ./.claims-check
+        with:
+          config: ${{ inputs.config }}

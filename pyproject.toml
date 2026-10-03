@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "claims-check"
-version = "0.2.0"
+version = "0.3.0"
 description = "Fail CI when the numbers and versions written in your README (test counts, case counts, version pins, release tags) no longer match the repository. Zero dependencies, GitHub Action."
 readme = "README.md"
 requires-python = ">=3.9"
